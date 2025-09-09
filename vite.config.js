@@ -11,7 +11,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Database Kokuo',
-        short_name: 'KokuoDB',
+        short_name: 'Tc Kokuo',
         description: 'Aplikasi database untuk manajemen peserta Kokuo.',
         theme_color: '#111827',
         background_color: '#111827',
