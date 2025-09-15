@@ -1,0 +1,13 @@
+# Konfigurasi build untuk Netlify
+[build]
+  # Perintah untuk membangun proyek Anda
+  command = "npm run build"
+  # Direktori hasil build yang akan di-deploy
+  publish = "dist"
+
+# Aturan pengalihan (redirect) untuk aplikasi Single Page Application (SPA)
+# Ini memberitahu Netlify untuk selalu menampilkan index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
