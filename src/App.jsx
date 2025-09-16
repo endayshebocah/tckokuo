@@ -1132,6 +1132,13 @@ const SkillsSummaryPopup = ({ onClose, allRecords, activeParticipants }) => {
         return analysis;
     }, [allRecords, activeParticipants]);
 
+    const branchColors = useMemo(() => [
+        'border-sky-500', 'border-emerald-500', 'border-amber-500', 'border-rose-500', 'border-violet-500', 'border-cyan-500', 'border-lime-500'
+    ], []);
+    const branchTextColors = useMemo(() => [
+        'text-sky-300', 'text-emerald-300', 'text-amber-300', 'text-rose-300', 'text-violet-300', 'text-cyan-300', 'text-lime-300'
+    ], []);
+
     const SkillBadge = ({ skill }) => {
         let colorClass = 'bg-gray-600';
         if (skill === 'Reflexology') colorClass = 'bg-blue-600';
@@ -1160,11 +1167,11 @@ const SkillsSummaryPopup = ({ onClose, allRecords, activeParticipants }) => {
                     <div>
                         <h3 className="text-2xl font-bold text-white mb-4">Rincian per Cabang</h3>
                         <div className="space-y-5">
-                            {Object.entries(skillsAnalysis.byBranch).map(([branch, staff], index) => (
-                                <div key={branch} className={`${index % 2 === 0 ? 'bg-gray-900/50' : 'bg-gray-800/60'} rounded-lg overflow-hidden border border-gray-700`}>
-                                    <h4 className="text-2xl font-bold text-sky-300 bg-gray-700/50 px-5 py-4 flex justify-between items-center">
+                            {Object.entries(skillsAnalysis.byBranch).sort(([a], [b]) => a.localeCompare(b)).map(([branch, staff], index) => (
+                                <div key={branch} className={`bg-gray-900/50 rounded-lg overflow-hidden border-2 ${branchColors[index % branchColors.length]}`}>
+                                    <h4 className={`text-2xl font-bold ${branchTextColors[index % branchTextColors.length]} bg-gray-800/60 px-5 py-4 flex justify-between items-center`}>
                                         <span>{branch}</span>
-                                        <span className="text-base bg-sky-500 px-3 py-1 rounded-full">{staff.length} Staf</span>
+                                        <span className={`text-lg font-bold bg-white/10 px-4 py-1.5 rounded-full`}>{staff.length} Staf</span>
                                     </h4>
                                     <div className="px-5 divide-y divide-gray-700/50">
                                         {staff.map(person => (
@@ -2726,7 +2733,7 @@ const ComplaintFormPopup = ({ onClose, onSave, therapists, branches, initialData
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
         therapistName: '', customerName: '', complaintDate: new Date().toISOString().split('T')[0],
-        cabang: '', complaintDetails: '', status: 'Baru', resolutionDetails: '',
+        cabang: '', complaintCategory: '', complaintDetails: '', status: 'Baru', resolutionDetails: '',
         reportedBy: currentUser?.nama || ''
     });
     const [therapistSuggestions, setTherapistSuggestions] = useState([]);
@@ -2738,6 +2745,7 @@ const ComplaintFormPopup = ({ onClose, onSave, therapists, branches, initialData
                 customerName: initialData.customerName || '',
                 complaintDate: initialData.complaintDate || new Date().toISOString().split('T')[0],
                 cabang: initialData.cabang || '',
+                complaintCategory: initialData.complaintCategory || '',
                 complaintDetails: initialData.complaintDetails || '',
                 status: initialData.status || 'Baru',
                 resolutionDetails: initialData.resolutionDetails || '',
@@ -2800,6 +2808,15 @@ const ComplaintFormPopup = ({ onClose, onSave, therapists, branches, initialData
                         <div><label className="block mb-2 text-gray-300">Nama Customer</label><input type="text" name="customerName" value={formData.customerName} onChange={handleChange} className="w-full input-rounded-border" /></div>
                         <div><label className="block mb-2 text-gray-300">Tanggal Komplain</label><input type="date" name="complaintDate" value={formData.complaintDate} onChange={handleChange} className="w-full input-rounded-border" required /></div>
                     </div>
+                    <div>
+                        <label className="block mb-2 text-gray-300">Kategori Komplain</label>
+                        <select name="complaintCategory" value={formData.complaintCategory} onChange={handleChange} className="w-full select-rounded-border" required>
+                            <option value="">Pilih Kategori</option>
+                            <option value="Reflexology">Reflexology</option>
+                            <option value="Athletic Massage">Athletic Massage</option>
+                            <option value="Seitai">Seitai</option>
+                        </select>
+                    </div>
                     <div><label className="block mb-2 text-gray-300">Detail Komplain</label><textarea name="complaintDetails" value={formData.complaintDetails} onChange={handleChange} className="w-full textarea-rounded-border h-28" required></textarea></div>
                     {initialData && (
                         <>
@@ -2860,7 +2877,7 @@ const ComplaintCard = ({ complaint, onDelete, onShowDetail, photo }) => {
             <div className="p-3 flex-grow">
                 <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden">
+                        <div className="w-12 h-12 rounded-md bg-gray-700 flex-shrink-0 overflow-hidden">
                            {photo ? <img src={photo} alt={complaint.therapistName} className="w-full h-full object-cover"/> : <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-500 m-auto" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>}
                         </div>
                         <div>
@@ -2930,6 +2947,17 @@ const ComplaintScreen = ({ onProcessComplaint }) => {
         });
     }, [complaints, filterStatus, searchTerm]);
 
+    const complaintsByBranch = useMemo(() => {
+        return filteredComplaints.reduce((acc, c) => {
+            const branch = c.cabang || 'Belum Ditentukan';
+            if (!acc[branch]) acc[branch] = [];
+            acc[branch].push(c);
+            return acc;
+        }, {});
+    }, [filteredComplaints]);
+
+    const sortedBranches = useMemo(() => Object.keys(complaintsByBranch).sort(), [complaintsByBranch]);
+
     const handleSaveComplaint = async (formData, complaintId) => {
         const success = await firestore.addOrUpdateComplaint(complaintId, formData);
         if (success) {
@@ -2989,18 +3017,25 @@ const ComplaintScreen = ({ onProcessComplaint }) => {
                     </select>
                 </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredComplaints.length > 0 ? (
-                    filteredComplaints.map(c => {
-                        const therapist = activeTherapists.find(t => t.nama === c.therapistName);
-                        return <ComplaintCard 
-                                    key={c.id} 
-                                    complaint={c} 
-                                    onDelete={firestore.deleteComplaint}
-                                    onShowDetail={() => handleShowDetail(c)}
-                                    photo={therapist?.photo || null}
-                               />;
-                    })
+            <div className="space-y-6">
+                {sortedBranches.length > 0 ? (
+                    sortedBranches.map(branch => (
+                        <div key={branch}>
+                            <h3 className="text-xl font-bold text-sky-300 mb-3 pl-2 border-l-4 border-sky-500">{branch}</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {complaintsByBranch[branch].map(c => {
+                                    const therapist = activeTherapists.find(t => t.nama === c.therapistName);
+                                    return <ComplaintCard 
+                                                key={c.id} 
+                                                complaint={c} 
+                                                onDelete={firestore.deleteComplaint}
+                                                onShowDetail={() => handleShowDetail(c)}
+                                                photo={therapist?.photo || null}
+                                           />;
+                                })}
+                            </div>
+                        </div>
+                    ))
                 ) : (
                     <p className="col-span-full text-center text-gray-400 py-10">Tidak ada data komplain yang cocok.</p>
                 )}
@@ -3296,9 +3331,7 @@ function AppContent() {
         trainer: currentUser?.nama || '',
     });
     setRecordToEdit(null);
-    setIsFormExpanded(true);
-    if (addFormRef.current) addFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [allRecords, initialFormState, setFormValues, setRecordToEdit, currentUser]);
+  }, [initialFormState, setFormValues, setRecordToEdit, currentUser]);
 
   const handleProcessComplaint = useCallback((participant, complaint) => {
     const firstRecordWithPhoto = allRecords
@@ -3311,6 +3344,8 @@ function AppContent() {
         photo: firstRecordWithPhoto ? firstRecordWithPhoto.photo : (participant.photo || null),
         status: 'Tahap Ceking',
         trainer: currentUser?.nama || '',
+        cabang: complaint.cabang || '',
+        cekingType: complaint.complaintCategory || 'Reflexology',
     });
     setComplaintBeingProcessed(complaint);
     setRecordToEdit(null);
@@ -3757,6 +3792,8 @@ function App() {
 }
 
 export default App;
+
+
 
 
 
