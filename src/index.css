@@ -1,3 +1,23 @@
+/* Pertama, tetap ada dasar-dasar Tailwind */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* KEMUDIAN, tambahkan SEMUA style kustom dari kode saya */
+@import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)');
+
+html, body, #root {
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    background-color: #2a2f3c; /* Warna latar belakang utama */
+    color: #e0e0e0;
+}
+
+/* Gaya untuk scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+/* ...dan seterusnya... */
+/* ...semua gaya untuk shadow, inset, animasi, dll. */
+/* ...harus disalin ke sini. */
