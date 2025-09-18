@@ -23,6 +23,7 @@ const availablePermissions = [
     { key: 'hasilKerja', label: 'Hasil Kerja Trainer' },
     { key: 'rangkumanKeahlian', label: 'Rangkuman Keahlian' },
     { key: 'komplainan', label: 'Komplainan' },
+    { key: 'isoTc', label: 'ISO TC' },
     { key: 'perbaikanData', label: 'Perbaikan Data' },
     { key: 'trash', label: 'Tong Sampah' }, { key: 'hapusBeberapa', label: 'Hapus Beberapa Data' },
     { key: 'izinAkses', label: 'Manajemen Izin Akses', adminOnly: true },
@@ -709,6 +710,16 @@ const ParticipantDetailView = ({ participant, allRecords, onClose, onEdit, onDel
             .sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
     }, [allRecords, participant]);
     
+    const completedStatuses = useMemo(() => {
+        const statuses = new Set();
+        participantHistory.forEach(rec => {
+            if (rec.status) {
+                statuses.add(rec.status);
+            }
+        });
+        return statuses;
+    }, [participantHistory]);
+
     const fullHistory = useMemo(() => {
         if (!participant.nama) return [];
 
@@ -891,9 +902,39 @@ const ParticipantDetailView = ({ participant, allRecords, onClose, onEdit, onDel
             <>
                 <h2 className="text-xl font-bold text-white mb-4 text-center">Rincian Peserta - <span className="text-yellow-300">{determineDisplayStatus(activeRecord)}</span></h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4 text-gray-300">{details}</div>
-                <div className="horizontal-scroll-container flex overflow-x-auto gap-2 p-1 mb-4">
-                    {timelineSteps.map(step => (<button key={step} onClick={() => handleTimelineClick(step)} className={`px-3 py-1 text-xs font-semibold rounded-md whitespace-nowrap ${activeRecord.status === step ? 'bg-blue-600 text-white' : 'bg-gray-600 text-gray-300'}`}>{step}</button>))}
+                
+                {/* Visual Timeline */}
+                <div className="w-full overflow-x-auto pb-4 mb-4">
+                    <div className="flex items-start justify-between min-w-max relative pt-5 px-4">
+                        <div className="absolute top-7 left-0 w-full h-0.5 bg-gray-600"></div>
+                        {timelineSteps.map((step, index) => {
+                            const isCompleted = completedStatuses.has(step);
+                            const isActive = activeRecord.status === step || (step === 'Lulus' && activeRecord.status === 'Lulus');
+                            
+                            const dotClass = isActive 
+                                ? 'bg-blue-500 ring-4 ring-blue-500/50' 
+                                : isCompleted 
+                                ? 'bg-green-500' 
+                                : 'bg-gray-600';
+
+                            const labelClass = (isActive || isCompleted) ? 'text-white' : 'text-gray-500';
+
+                            return (
+                                <div key={index} className="flex-1 flex flex-col items-center text-center cursor-pointer relative group" onClick={() => handleTimelineClick(step)}>
+                                    <div className={`w-5 h-5 rounded-full z-10 flex items-center justify-center transition-all duration-300 transform group-hover:scale-110 ${dotClass}`}>
+                                        {isCompleted && !isActive && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    <p className={`mt-2 text-xs font-semibold w-24 truncate ${labelClass}`}>{step.replace('Ceking tahap', 'Cek').replace('Evaluasi', 'Eval')}</p>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
+
                 {showAssessmentHistory && (
                     <div className="my-4 p-4 bg-gray-900/50 rounded-lg max-h-64 overflow-y-auto">
                         <h3 className="text-lg font-semibold text-purple-300 mb-3 text-center">Riwayat Penilaian</h3>
@@ -958,9 +999,9 @@ const ParticipantDetailView = ({ participant, allRecords, onClose, onEdit, onDel
             <h2 className="text-xl font-bold text-white mb-4 text-center">Riwayat Daftar Hadir</h2>
             {historyLoading ? (<p className="text-center p-8 text-gray-400">Memuat riwayat...</p>) : attendanceHistory.length > 0 ? (
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-900 sticky top-0"><tr><th className="p-2 font-semibold text-gray-300">Tanggal</th><th className="p-2 font-semibold text-gray-300">Status</th><th className="p-2 font-semibold text-gray-300">Keterangan</th></tr></thead>
+                    <thead className="bg-gray-900 sticky top-0"><tr><th className="p-2 font-semibold text-gray-300">Tanggal</th><th className="p-2 font-semibold text-gray-300">Shift</th><th className="p-2 font-semibold text-gray-300">Status</th><th className="p-2 font-semibold text-gray-300">Keterangan</th></tr></thead>
                     <tbody className="bg-gray-800 divide-y divide-gray-700">
-                        {attendanceHistory.map((item, index) => (<tr key={index} className="hover:bg-gray-700/50"><td className="p-2 whitespace-nowrap">{formatFirebaseTimestamp(item.date).date}</td><td className="p-2 whitespace-nowrap">{item.attendanceStatus}</td><td className="p-2">{item.notes || '-'}</td></tr>))}
+                        {attendanceHistory.map((item, index) => (<tr key={index} className="hover:bg-gray-700/50"><td className="p-2 whitespace-nowrap">{formatFirebaseTimestamp(item.date).date}</td><td className="p-2 whitespace-nowrap">{item.shift || '-'}</td><td className="p-2 whitespace-nowrap">{item.attendanceStatus}</td><td className="p-2">{item.notes || '-'}</td></tr>))}
                     </tbody>
                 </table>) : (<p className="text-center p-8 text-gray-400">Tidak ada riwayat kehadiran ditemukan.</p>)}
         </div>
@@ -1079,7 +1120,7 @@ const EvaluationCard = React.memo(({ record, onFollowUp, onCardClick }) => {
 
 const SkillsSummaryPopup = ({ onClose, allRecords, activeParticipants }) => {
     const skillsAnalysis = useMemo(() => {
-        const analysis = { masters: [], reflexologyOnly: [], athleticOnly: [], byBranch: {} };
+        const analysis = { masters: [], reflexologyOnly: [], athleticOnly: [], seitaiOnly: [], byBranch: {} };
         if (!activeParticipants || !allRecords) return analysis;
 
         const recordsByName = allRecords.reduce((acc, record) => {
@@ -1104,9 +1145,9 @@ const SkillsSummaryPopup = ({ onClose, allRecords, activeParticipants }) => {
             const history = recordsByName[participant.nama] || [];
             const skills = new Set();
             history.forEach(rec => {
-                if (rec.status === 'Lulus' || (rec.status === 'Evaluasi Reflexology' && rec.evaluationResult === 'Lulus')) skills.add('Reflexology');
-                if (rec.status === 'Evaluasi Athletic Massage' && rec.evaluationResult === 'Lulus') skills.add('Athletic Massage');
-                if (rec.status === 'Evaluasi Seitai' && rec.evaluationResult === 'Lulus') skills.add('Seitai');
+                if (rec.status === 'Lulus' || rec.status === 'Evaluasi Reflexology') skills.add('Reflexology');
+                if (rec.status === 'Evaluasi Athletic Massage') skills.add('Athletic Massage');
+                if (rec.status === 'Evaluasi Seitai') skills.add('Seitai');
             });
             return { ...participant, skills: Array.from(skills) };
         });
@@ -1119,6 +1160,7 @@ const SkillsSummaryPopup = ({ onClose, allRecords, activeParticipants }) => {
             if (hasReflex && hasAthletic && hasSeitai) analysis.masters.push(p.nama);
             else if (hasReflex && !hasAthletic && !hasSeitai) analysis.reflexologyOnly.push(p.nama);
             else if (!hasReflex && hasAthletic && !hasSeitai) analysis.athleticOnly.push(p.nama);
+            else if (!hasReflex && !hasAthletic && hasSeitai) analysis.seitaiOnly.push(p.nama);
 
             const branch = p.turunKeCabang || p.cabang || 'Belum Ditentukan';
             if (!analysis.byBranch[branch]) analysis.byBranch[branch] = [];
@@ -1128,6 +1170,7 @@ const SkillsSummaryPopup = ({ onClose, allRecords, activeParticipants }) => {
         analysis.masters.sort();
         analysis.reflexologyOnly.sort();
         analysis.athleticOnly.sort();
+        analysis.seitaiOnly.sort();
         Object.values(analysis.byBranch).forEach(staffList => staffList.sort((a, b) => a.name.localeCompare(b.name)));
         return analysis;
     }, [allRecords, activeParticipants]);
@@ -1159,10 +1202,11 @@ const SkillsSummaryPopup = ({ onClose, allRecords, activeParticipants }) => {
             <div className="popup-wrapper popup-wrapper-visible bg-gray-800 p-6 rounded-xl shadow-neumorphic w-full max-w-6xl border-2 border-yellow-500 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
                 <h2 className="text-3xl font-bold text-center text-yellow-300 mb-6">Rangkuman Keahlian Staf</h2>
                 <div className="flex-grow overflow-auto pr-2 space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <SpecialCategorySection title="Master Semua Keahlian" count={skillsAnalysis.masters.length} />
                         <SpecialCategorySection title="Spesialis Reflexology" count={skillsAnalysis.reflexologyOnly.length} />
                         <SpecialCategorySection title="Spesialis Athletic Massage" count={skillsAnalysis.athleticOnly.length} />
+                        <SpecialCategorySection title="Spesialis Seitai" count={skillsAnalysis.seitaiOnly.length} />
                     </div>
                     <div>
                         <h3 className="text-2xl font-bold text-white mb-4">Rincian per Cabang</h3>
@@ -1487,6 +1531,7 @@ const ReportDisplayPopup = ({ onClose, title, columns, startDate, endDate, locat
             date: formatFirebaseTimestamp(d.date).date,
             location: d.location,
             status: d.attendanceStatus,
+            shift: d.shift || '-',
             notes: d.notes || '-',
             recordedBy: d.recordedBy,
         }));
@@ -1617,6 +1662,7 @@ const AttendancePopup = ({ onClose, tcParticipants, athleticParticipants, seitai
     const { db, showToast, currentUser, openModal } = useContext(AppContext);
     const firestore = useFirestore();
     const [activeList, setActiveList] = useState('TC');
+    const [activeShift, setActiveShift] = useState('Shift 1');
     const [selectedLocation, setSelectedLocation] = useState('');
     const [attendanceData, setAttendanceData] = useState({});
     const [participantToResign, setParticipantToResign] = useState(null);
@@ -1703,6 +1749,7 @@ const AttendancePopup = ({ onClose, tcParticipants, athleticParticipants, seitai
                 batch.set(newAttendanceRef, {
                     participantId: p.id, participantName: p.nama, location: locationForDb,
                     attendanceStatus: data.status, notes: data.notes || '',
+                    shift: activeShift,
                     date: serverTimestamp(), recordedBy: currentUser.nama
                 });
             }
@@ -1730,6 +1777,7 @@ const AttendancePopup = ({ onClose, tcParticipants, athleticParticipants, seitai
                 { header: 'Nama', accessor: 'participantName' },
                 { header: 'Status', accessor: 'status' },
                 { header: 'Tanggal', accessor: 'date' },
+                { header: 'Shift', accessor: 'shift' },
                 { header: 'Lokasi', accessor: 'location' },
                 { header: 'Keterangan', accessor: 'notes' },
                 { header: 'Oleh', accessor: 'recordedBy' }
@@ -1759,6 +1807,11 @@ const AttendancePopup = ({ onClose, tcParticipants, athleticParticipants, seitai
                 <div className="popup-wrapper popup-wrapper-visible bg-gray-800 p-6 rounded-xl shadow-neumorphic w-full max-w-2xl border-2 border-green-500 flex flex-col" onClick={(e) => e.stopPropagation()}>
                     <h2 className="text-2xl font-bold text-center text-green-300 mb-4">Daftar Hadir Peserta</h2>
                     
+                    <div className="flex border-b border-gray-600 mb-4">
+                        <button onClick={() => setActiveShift('Shift 1')} className={`flex-1 py-2 text-center font-semibold ${activeShift === 'Shift 1' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-400'}`}>Shift 1</button>
+                        <button onClick={() => setActiveShift('Shift 2')} className={`flex-1 py-2 text-center font-semibold ${activeShift === 'Shift 2' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-400'}`}>Shift 2</button>
+                    </div>
+
                     <div className="flex border-b border-gray-600 mb-4">
                         <button onClick={() => setActiveList('TC')} className={`flex-1 py-2 text-center font-semibold ${activeList === 'TC' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'}`}>TC Reguler</button>
                         <button onClick={() => setActiveList('Athletic')} className={`flex-1 py-2 text-center font-semibold ${activeList === 'Athletic' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'}`}>Athletic Massage</button>
@@ -3234,6 +3287,10 @@ const NavMenu = ({ setActiveView, onEditParticipant, activeRecords, uniqueLatest
         });
     };
 
+    const handleOpenIsoTc = () => {
+        window.open('https://isotc.netlify.app/', '_blank', 'noopener,noreferrer');
+    };
+
     return (
         <div ref={navMenuRef} className="relative">
             <button onClick={() => setIsNavMenuOpen(p => !p)} className="p-3 bg-gray-700 rounded-lg shadow-neumorphic">
@@ -3247,6 +3304,7 @@ const NavMenu = ({ setActiveView, onEditParticipant, activeRecords, uniqueLatest
                    {currentUser?.permissions?.tindakLanjut && <button onClick={() => handleMenuClick(() => openModal('followUpDateRange', { onFetch: reports.handleFetchFollowUp }))} className="w-full text-left px-4 py-2 rounded-md font-semibold text-white bg-indigo-500 hover:bg-indigo-600">Tindak Lanjut</button>}
                    {currentUser?.permissions?.hasilKerja && <button onClick={() => handleMenuClick(() => openModal('trainerPerformanceDateRange', { onFetch: reports.handleFetchTrainerPerformanceByDate }))} className="w-full text-left px-4 py-2 rounded-md font-semibold text-white bg-indigo-500 hover:bg-indigo-600">Hasil Kerja</button>}
                    {currentUser?.permissions?.rangkumanKeahlian && <button onClick={() => handleMenuClick(() => openModal('skillsSummary', { allRecords, activeParticipants: uniqueLatestRecords }))} className="w-full text-left px-4 py-2 rounded-md font-semibold text-white bg-sky-500 hover:bg-sky-600">Rangkuman Keahlian</button>}
+                   {currentUser?.permissions?.isoTc && <button onClick={() => handleMenuClick(handleOpenIsoTc)} className="w-full text-left px-4 py-2 rounded-md font-semibold text-white bg-cyan-500 hover:bg-cyan-600">ISO TC</button>}
                    {currentUser?.permissions?.perbaikanData && <button onClick={() => handleMenuClick(() => openModal('masterData', { records: activeRecords }))} className="w-full text-left px-4 py-2 rounded-md font-semibold text-white bg-amber-500 hover:bg-amber-600">Perbaikan Data</button>}
                    {currentUser?.permissions?.izinAkses && <button onClick={() => handleMenuClick(() => setActiveView('izinAkses'))} className="w-full text-left px-4 py-2 rounded-md font-semibold text-white bg-violet-500 hover:bg-violet-600">Izin Akses</button>}
                    {currentUser?.permissions?.trash && <button onClick={() => handleMenuClick(() => setActiveView('trash'))} className="w-full text-left px-4 py-2 rounded-md font-semibold text-white bg-rose-500 hover:bg-rose-600">Tong Sampah</button>}
@@ -3792,6 +3850,13 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
+
 
 
 
