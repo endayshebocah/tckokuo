@@ -473,7 +473,7 @@ const useForm = (initialState, uniqueLatestRecords, allRecords, currentUser) => 
 
     const handleFormInputChange = useCallback((e) => {
         const { name, value } = e.target;
-        setFormValues(prev => ({ ...prev, [name]: value }));
+        setFormValues(prev => ({ ...prev, [name]: name === 'nama' ? value.toLowerCase() : value }));
         if (name === 'nama' && value.trim() !== '') {
             const filtered = uniqueLatestRecords.filter(record => record.nama.toLowerCase().includes(value.toLowerCase()));
             setNameSuggestions(filtered);
@@ -489,7 +489,7 @@ const useForm = (initialState, uniqueLatestRecords, allRecords, currentUser) => 
 
         setFormValues({
             ...initialState,
-            nama: record.nama,
+            nama: record.nama.toLowerCase(),
             photo: firstRecordWithPhoto ? firstRecordWithPhoto.photo : (record.photo || null),
             trainer: currentUser?.nama || '',
         });
@@ -3850,6 +3850,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
